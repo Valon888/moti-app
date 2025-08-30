@@ -863,7 +863,11 @@
     }
     setStatus(lang("getting_location"), true);
     navigator.geolocation.getCurrentPosition(
-      pos => loadByCoords(pos.coords.latitude, pos.coords.longitude),
+      async pos => {
+        // Merr emrin e vendndodhjes për label
+        let label = await reverseLookup(pos.coords.latitude, pos.coords.longitude);
+        await loadByCoords(pos.coords.latitude, pos.coords.longitude, label);
+      },
       err => setStatus(lang("location_failed") + (err.message||"lejet e bllokuara"))
     );
   });
@@ -906,3 +910,5 @@
 </script>
 </body>
 </html>
+
+
