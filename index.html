@@ -2,17 +2,25 @@
 <html lang="sq">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Moti – App</title>
   <!-- 'meta[name=theme-color]' is not supported by Firefox, Firefox for Android, Opera -->
-  <gi  <!-- Apple Touch Icon for iOS Home Screen -->
+  <!-- Ikona për Home Screen (iOS/Android/Samsung) -->
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512x512.png" />
   <meta name="msapplication-TileColor" content="#0ea5e9" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <!-- For Safari/iOS PWA theme color -->
-  <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Moti – App" />
+  <!-- 'theme-color' is used by Chrome, Edge, and some Android browsers; not supported by Firefox/Opera -->
+  <meta name="theme-color" content="#0ea5e9" />
+  <meta name="application-name" content="Moti – App" />
+  <meta name="description" content="Parashikimi i motit për Kosovë. Shtoje në Home Screen për përdorim si aplikacion në Android/iOS/Samsung." />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Moti – App" />
+  <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css">
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
@@ -156,9 +164,9 @@
     <p class="sr-only" id="a11y"></p>
   </main>
 
-  <!-- Leaflet JS -->
+  <!-- Leaflet JS dhe leaflet-providers (renditja e saktë) -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="https://unpkg.com/leaflet-providers@1.13.0/leaflet-providers.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet-providers@1.13.0/leaflet-providers.min.js"></script>
   <script>
     // ============= Leaflet Google Maps Satellite =============
     document.addEventListener("DOMContentLoaded", function() {
@@ -229,14 +237,20 @@
           label: name + ", Kosovë"
         };
       }
-      // Otherwise, use API
-      const res = await fetch(`http://192.168.1.3:3001/api/geocode?name=${encodeURIComponent(name)}`);
+      // Otherwise, use Open-Meteo Geocoding API directly
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=sq&format=json`);
       if (!res.ok) throw new Error("Qyteti nuk u gjet");
-      return await res.json();
+      const data = await res.json();
+      if (!data.results || !data.results[0]) throw new Error("Qyteti nuk u gjet");
+      return {
+        lat: data.results[0].latitude,
+        lon: data.results[0].longitude,
+        label: data.results[0].name + (data.results[0].country ? ", " + data.results[0].country : "")
+      };
     }
 
     async function reverseLookup(lat, lon){
-      const res = await fetch(`http://localhost:3001/api/reverse?lat=${lat}&lon=${lon}`);
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${lat}&longitude=${lon}&language=sq&format=json`);
       if(!res.ok) return null;
       const data = await res.json();
       const c = data && data.results && data.results[0];
@@ -244,20 +258,27 @@
     }
 
     async function getWeather(lat, lon) {
-      const res = await fetch(`http://localhost:3001/api/weather?lat=${lat}&lon=${lon}`);
-      if (!res.ok) throw new Error("Gabim në marrjen e motit");
+      // Përdor Open-Meteo Weather API direkt
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relative_humidity_2m,pressure_msl,precipitation,windspeed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_hours,sunrise,sunset,weathercode&timezone=auto`;
+      let res;
+      try {
+        res = await fetch(url);
+      } catch (err) {
+        throw new Error("Nuk u lidh me serverin e motit. Kontrollo internetin, adblock ose lejo HTTPS.");
+      }
+      if (!res.ok) {
+        if (res.status === 0) {
+          throw new Error("Nuk u lidh me serverin e motit. Kontrollo lidhjen ose lejo HTTPS.");
+        }
+        throw new Error("Gabim në marrjen e motit (" + res.status + ").");
+      }
       return res.json();
     }
 
-    async function getBulkWeather(locations) {
-      const res = await fetch('http://192.168.1.3:3001/api/weather/bulk', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ locations })
-      });
-      if (!res.ok) throw new Error("Gabim në marrjen e motit");
-      return await res.json();
-    }
+  // async function getBulkWeather(locations) {
+  //   // Bulk weather nuk mbështetet direkt nga Open-Meteo API pa backend
+  //   // Mund të implementohet me Promise.all nëse duhet për përdorim të mëvonshëm
+  // }
 
     function renderCurrent(place, wx){
       if (!wx || !wx.current_weather || typeof wx.current_weather.temperature === 'undefined') {
@@ -495,7 +516,7 @@
         speak(`Moti për ${place}: ${Math.round(wx.current_weather.temperature)} gradë celsius.`);
       }catch(err){
         setStatus(err.message || "Ndodhi një gabim.");
-        currentEl.innerHTML = `<div class="card error">😕 ${err.message||"Gabim"}</div>`;
+        currentEl.innerHTML = `<div class="card error">😕 ${err.message||"Gabim"}<br><small>Kontrollo lidhjen me internet, adblock ose HTTPS. Provo të rifreskosh faqen ose të fshish cache.</small></div>`;
       }
     }
 
@@ -547,12 +568,17 @@ setInterval(() => {
   }
 }, 600000);
   </script>
-  <link rel="manifest" href="manifest.json">
+  <!-- manifest.json është tashmë i përfshirë më lart -->
   <script>
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js');
-}
-</script>
+  // Regjistro service worker vetëm në prodhim, mos e çregjistro automatikisht
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('sw.js', {scope: './'})
+        .then(function(reg){ /* sukses */ })
+        .catch(function(e){ /* silent fail */ });
+    });
+  }
+  </script>
 <script>
   // Dark mode automatik nga sistemi
   if(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches){
