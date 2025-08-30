@@ -176,19 +176,26 @@
     document.addEventListener("DOMContentLoaded", function() {
       if (document.getElementById('map')) {
         map = L.map('map').setView([42.6, 21.0], 8);
-          // OpenStreetMap Standard (falas, pa API key)
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            minZoom: 6,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          }).addTo(map);
+        // Esri World Imagery (satelitor, falas për përdorim jo-komercial)
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          maxZoom: 19,
+          minZoom: 6,
+          attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        }).addTo(map);
+        // Overlay për rrugë dhe kufij (OpenStreetMap)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          minZoom: 6,
+          opacity: 0.4,
+          attribution: false
+        }).addTo(map);
         // Rectangle for Kosovo
         L.rectangle([[41.8, 20.9], [43, 21.9]], {color: "#0ea5e9", weight: 2, fillOpacity: 0}).addTo(map);
       }
     });
   <div>
-    <div class="muted forecast-title">Pamje interaktive (OpenStreetMap)</div>
-    <div class="satellite-caption">Burimi: OpenStreetMap</div>
+  <div class="muted forecast-title">Pamje satelitore interaktive (Esri + OSM)</div>
+  <div class="satellite-caption">Burimi: Esri World Imagery &amp; OpenStreetMap</div>
   </div>
 
     // Funksion për të shfaqur markerin e live location
