@@ -1,0 +1,33 @@
+# 🌤️ Moti App
+
+**Moti App** is a simple and modern weather forecast application built with **HTML, CSS, and JavaScript**.  
+It uses the **[Open-Meteo API](https://open-meteo.com/)** (free, no API key required) to display **current weather** and a **5-day forecast**.
+
+---
+
+## ✨ Features
+
+- 🔍 Search weather by city name  
+- 📍 Get weather by **current location (GPS)**  
+- 🌡️ Display temperature, wind speed, and weather conditions  
+- 📱 Responsive design – works perfectly on mobile devices  
+- 📲 Works as a **Progressive Web App (PWA)** – add it to your Home Screen  
+
+---
+
+## 🚀 Live Demo
+
+👉 [https://Valon888.github.io/moti-app/](https://Valon888.github.io/moti-app/)
+
+---
+
+## ⚙️ Technologies Used
+
+- **HTML5**
+- **CSS3** (Flexbox, Grid, modern styling)
+- **JavaScript** (Fetch API, Geolocation API)
+- **Open-Meteo Weather API**
+
+---
+
+## 📂 Project Structure
