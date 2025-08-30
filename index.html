@@ -24,6 +24,53 @@
   <meta name="apple-mobile-web-app-title" content="Moti – App" />
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css">
+    <style>
+      /* Mobile map improvements */
+      #map.satellite-map {
+        width: 100vw;
+        max-width: 100vw;
+        min-width: 0;
+        height: 320px;
+        max-height: 50vh;
+        border-radius: 18px;
+        margin: 0 auto 1em auto;
+        box-shadow: 0 2px 16px #0002;
+        touch-action: pan-x pan-y;
+        /* Remove outline on tap */
+        outline: none;
+      }
+      @media (max-width: 600px) {
+        #map.satellite-map {
+          height: 45vw;
+          min-height: 220px;
+          max-height: 60vw;
+          border-radius: 14px;
+        }
+        .app {
+          padding: 0.5em;
+        }
+      }
+      /* Make map controls bigger for touch */
+      .leaflet-control-zoom a {
+        font-size: 1.5em;
+        width: 2.2em;
+        height: 2.2em;
+      }
+      .leaflet-control {
+        border-radius: 10px !important;
+      }
+  </style>
+  <!-- Push Notification Setup moved to script below -->
+  <script>
+  // ========== Push Notification Setup ==========
+  // Request notification permission on load if not denied
+  document.addEventListener("DOMContentLoaded", function() {
+    if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+      Notification.requestPermission();
+    }
+    // Nuk shfaqet më asnjë paralajmërim nëse njoftimet janë të bllokuara
+  });
+  </script>
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
   <!-- Chart.js -->
@@ -34,45 +81,22 @@
     <h1>🌤️ Parashikimi i Motit</h1>
 
     <div class="row" role="search">
-      <input id="q" type="search" placeholder="Kërko qytet… p.sh. Prishtinë" autocomplete="off" list="citiesKS" />
-      <datalist id="citiesKS">
-        <option value="Prishtinë" />
-        <option value="Ferizaj" />
-        <option value="Pejë" />
-        <option value="Gjakovë" />
-        <option value="Mitrovicë" />
-        <option value="Gjilan" />
-        <option value="Prizren" />
-        <option value="Vushtrri" />
-        <option value="Podujevë" />
-        <option value="Fushë Kosovë" />
-        <option value="Suharekë" />
-        <option value="Rahovec" />
-        <option value="Drenas" />
-        <option value="Malishevë" />
-        <option value="Kamenicë" />
-        <option value="Istog" />
-        <option value="Deçan" />
-        <option value="Dragash" />
-        <option value="Lipjan" />
-        <option value="Kaçanik" />
-        <option value="Shtime" />
-        <option value="Klinë" />
-        <option value="Skenderaj" />
-        <option value="Obiliq" />
-        <option value="Viti" />
-        <option value="Juniku" />
-        <option value="Hani i Elezit" />
-        <option value="Zubin Potok" />
-        <option value="Zveçan" />
-        <option value="Leposaviq" />
-        <option value="Graçanicë" />
-        <option value="Mamusha" />
-        <option value="Partesh" />
-        <option value="Ranillug" />
-      </datalist>
+      <select id="countrySelect" title="Zgjedh shtetin">
+        <option value="KS">Kosovë</option>
+        <option value="DE">Gjermani</option>
+      </select>
+      <select id="langSelect" title="Zgjedh gjuhën">
+        <option value="sq">Shqip</option>
+        <option value="en">English</option>
+        <option value="de">Deutsch</option>
+      </select>
+      <input id="q" type="search" placeholder="Kërko qytet…" autocomplete="off" list="cityListData" />
+      <datalist id="cityListData"></datalist>
       <button id="btnSearch" type="button" title="Kërko">Kërko</button>
-      <button id="btnGeo" type="button" title="Përdor lokacionin tim">GPS</button>
+      <button id="btnGeo" type="button" title="Përdor lokacionin tim">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" style="vertical-align:middle;"><path fill="#fff" d="M12 2a1 1 0 0 1 1 1v1.07A8.001 8.001 0 0 1 19.93 11H21a1 1 0 1 1 0 2h-1.07A8.001 8.001 0 0 1 13 19.93V21a1 1 0 1 1-2 0v-1.07A8.001 8.001 0 0 1 4.07 13H3a1 1 0 1 1 0-2h1.07A8.001 8.001 0 0 1 11 4.07V3a1 1 0 0 1 1-1Zm0 4a6 6 0 1 0 0 12A6 6 0 0 0 12 6Zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"/></svg>
+        GPS
+      </button>
     </div>
 
     <div class="city-list-wrap">
@@ -87,8 +111,12 @@
 
     <section class="card">
       <div class="muted forecast-title">Pamje satelitore interaktive (Esri + OSM)</div>
+      <div style="display:flex;align-items:center;gap:1em;">
+        <button id="radarToggle" type="button" style="margin-bottom:8px;">Shfaq Radar</button>
+        <span id="radarStatus" class="muted" style="font-size:0.95em;"></span>
+      </div>
       <div id="map" class="satellite-map"></div>
-      <div class="satellite-caption">Burimi: Esri World Imagery &amp; OpenStreetMap</div>
+      <div class="satellite-caption">Burimi: Esri World Imagery &amp; OpenStreetMap, RainViewer Radar</div>
     </section>
 
     <section class="card">
@@ -115,6 +143,10 @@
   // Kosovo cities for quick access
   const kosovoCities = [
     "Prishtinë","Ferizaj","Pejë","Gjakovë","Mitrovicë","Gjilan","Prizren","Vushtrri","Podujevë","Fushë Kosovë","Suharekë","Rahovec","Drenas","Malishevë","Kamenicë","Istog","Deçan","Dragash","Lipjan","Kaçanik","Shtime","Klinë","Skenderaj","Obiliq","Viti","Juniku","Hani i Elezit","Zubin Potok","Zveçan","Leposaviq","Graçanicë","Mamusha","Partesh","Ranillug"
+  ];
+  // Germany cities for quick access (major cities)
+  const germanyCities = [
+    "Berlin","Hamburg","München","Köln","Frankfurt am Main","Stuttgart","Düsseldorf","Dortmund","Essen","Leipzig","Bremen","Dresden","Hannover","Nürnberg","Duisburg","Bochum","Wuppertal","Bielefeld","Bonn","Münster","Karlsruhe","Mannheim","Augsburg","Wiesbaden","Gelsenkirchen","Mönchengladbach","Braunschweig","Chemnitz","Kiel","Aachen"
   ];
   // Manual coordinates for Kosovo cities
   const kosovoCityCoords = {
@@ -155,27 +187,140 @@
   };
   // ========== Leaflet Map + Live Location Marker ===========
   let map, liveMarker;
+  let langSelect, countrySelect;
+  // ================== Përkthimet ==================
+  const translations = {
+    sq: {
+      searching_city: "Duke kërkuar qytetin…",
+      city_not_found: "Qyteti nuk u gjet.",
+      enter_city: "Shkruaj emrin e qytetit.",
+      loading: "Duke ngarkuar…",
+      updated: "U përditësua me sukses.",
+      gps_not_supported: "Pajisja nuk mbështet GPS.",
+      getting_location: "Duke marrë lokacionin…",
+      location_failed: "S’u mor lokacioni: ",
+      allow_gps: "Lejo GPS-in ose kërko një qytet.",
+      weather_unavailable: "😕 Të dhënat e motit nuk janë të disponueshme.",
+      forecast_unavailable: "😕 Të dhënat e parashikimit nuk janë të disponueshme.",
+      temp: "Temp",
+      min: "Min",
+      max: "Max",
+      humidity: "Lagështi",
+      pressure: "Presion",
+      precipitation: "Reshje",
+      wind: "Era",
+      winddir: "Drejtimi",
+      sunrise: "Lindja",
+      sunset: "Perëndimi"
+    },
+    en: {
+      searching_city: "Searching city…",
+      city_not_found: "City not found.",
+      enter_city: "Enter city name.",
+      loading: "Loading…",
+      updated: "Updated successfully.",
+      gps_not_supported: "Device does not support GPS.",
+      getting_location: "Getting location…",
+      location_failed: "Location failed: ",
+      allow_gps: "Allow GPS or search a city.",
+      weather_unavailable: "😕 Weather data not available.",
+      forecast_unavailable: "😕 Forecast data not available.",
+      temp: "Temp",
+      min: "Min",
+      max: "Max",
+      humidity: "Humidity",
+      pressure: "Pressure",
+      precipitation: "Precipitation",
+      wind: "Wind",
+      winddir: "Direction",
+      sunrise: "Sunrise",
+      sunset: "Sunset"
+    },
+    de: {
+      searching_city: "Stadt wird gesucht…",
+      city_not_found: "Stadt nicht gefunden.",
+      enter_city: "Stadtname eingeben.",
+      loading: "Lädt…",
+      updated: "Erfolgreich aktualisiert.",
+      gps_not_supported: "Gerät unterstützt kein GPS.",
+      getting_location: "Standort wird ermittelt…",
+      location_failed: "Standort fehlgeschlagen: ",
+      allow_gps: "GPS erlauben oder Stadt suchen.",
+      weather_unavailable: "😕 Wetterdaten nicht verfügbar.",
+      forecast_unavailable: "😕 Vorhersagedaten nicht verfügbar.",
+      temp: "Temp",
+      min: "Min",
+      max: "Max",
+      humidity: "Luftfeuchte",
+      pressure: "Luftdruck",
+      precipitation: "Niederschlag",
+      wind: "Wind",
+      winddir: "Richtung",
+      sunrise: "Sonnenaufgang",
+      sunset: "Sonnenuntergang"
+    }
+  };
+  function lang(key) {
+    const l = langSelect && langSelect.value || "sq";
+    return (translations[l] && translations[l][key]) || translations["sq"][key] || key;
+  }
+
+  let radarLayer = null;
+  let radarVisible = false;
   document.addEventListener("DOMContentLoaded", function() {
-    // Populate city list
+    langSelect = document.getElementById("langSelect");
+    countrySelect = document.getElementById("countrySelect");
+    // Populate city list and datalist based on country
     const cityListDiv = document.getElementById("cityList");
+    const datalist = document.getElementById("cityListData");
+    function updateCityList() {
+      let cities = countrySelect.value === "DE" ? germanyCities : kosovoCities;
+      if(cityListDiv) {
+        cityListDiv.innerHTML = cities.map(city => `<button class=\"city-btn\" data-city=\"${city}\">${city}</button>`).join("");
+      }
+      if(datalist) {
+        datalist.innerHTML = cities.map(city => `<option value=\"${city}\" />`).join("");
+      }
+      // Update city list title
+      const cityListTitle = document.querySelector('.city-list-title');
+      if (cityListTitle) {
+        cityListTitle.textContent = countrySelect.value === "DE" ?
+          (langSelect.value === "de" ? "Städte in Deutschland:" : (langSelect.value === "en" ? "Cities in Germany:" : "Qytetet e Gjermanisë:")) :
+          (langSelect.value === "de" ? "Städte im Kosovo:" : (langSelect.value === "en" ? "Cities in Kosovo:" : "Qytetet e Kosovës:"));
+      }
+    }
+    countrySelect.addEventListener("change", updateCityList);
+    langSelect.addEventListener("change", updateCityList);
+    updateCityList();
     if(cityListDiv) {
-      cityListDiv.innerHTML = kosovoCities.map(city => `<button class="city-btn" data-city="${city}">${city}</button>`).join("");
       cityListDiv.addEventListener("click", async function(e) {
         if(e.target && e.target.matches(".city-btn")) {
           q.value = e.target.dataset.city;
           try {
-            setStatus("Duke kërkuar qytetin…", true);
+            setStatus(lang("searching_city"), true);
             const {lat,lon,label} = await searchCityByName(q.value);
             await loadByCoords(lat,lon,label);
           } catch(err){
-            setStatus(err.message||"Qyteti nuk u gjet.");
+            setStatus(err.message||lang("city_not_found"));
           }
         }
       });
     }
     // Init map
     if (document.getElementById('map')) {
-      map = L.map('map').setView([42.6, 21.0], 8);
+      // Responsive map container for mobile
+      const mapDiv = document.getElementById('map');
+      mapDiv.classList.add('satellite-map');
+      map = L.map('map', {
+        zoomControl: true,
+        attributionControl: true,
+        tap: true,
+        dragging: true,
+        scrollWheelZoom: true,
+        doubleClickZoom: true,
+        boxZoom: true,
+        touchZoom: true
+      }).setView([42.6, 21.0], 8);
       // Esri World Imagery (satelitor, falas për përdorim jo-komercial)
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19,
@@ -191,6 +336,41 @@
       }).addTo(map);
       // Rectangle for Kosovo
       L.rectangle([[41.8, 20.9], [43, 21.9]], {color: "#0ea5e9", weight: 2, fillOpacity: 0}).addTo(map);
+
+      // Radar toggle logic
+      const radarToggle = document.getElementById('radarToggle');
+      const radarStatus = document.getElementById('radarStatus');
+      function updateRadarButton() {
+        radarToggle.textContent = radarVisible ? "Fshih Radar" : "Shfaq Radar";
+        radarStatus.textContent = radarVisible ? "Radar aktiv (RainViewer)" : "Radar i fikur";
+      }
+      function addRadarLayer() {
+        if (radarLayer) return;
+        radarLayer = L.tileLayer('https://tilecache.rainviewer.com/v2/radar/nowcast/{z}/{x}/{y}/2/1_1.png', {
+          opacity: 0.7,
+          zIndex: 100,
+          attribution: 'Radar &copy; RainViewer'
+        });
+        radarLayer.addTo(map);
+      }
+      function removeRadarLayer() {
+        if (radarLayer) {
+          map.removeLayer(radarLayer);
+          radarLayer = null;
+        }
+      }
+      if (radarToggle) {
+        radarToggle.addEventListener('click', function() {
+          radarVisible = !radarVisible;
+          if (radarVisible) {
+            addRadarLayer();
+          } else {
+            removeRadarLayer();
+          }
+          updateRadarButton();
+        });
+        updateRadarButton();
+      }
     }
   });
 
@@ -213,22 +393,36 @@
   const GEO_URL = "https://geocoding-api.open-meteo.com/v1";
   const WX_URL  = "https://api.open-meteo.com/v1/forecast";
 
-  // Hartë WMO -> përshkrim + emoji (në shqip)
+  // Hartë WMO -> përshkrim + emoji në 3 gjuhë
   const WMO = new Map([
-    [0,  ["Qiell i kthjellët","☀️"]],
-    [1,  ["Kryesisht kthjellët","🌤️"]],
-    [2,  ["Më pjesë me re","⛅"]],
-    [3,  ["Me re/mbuluar","☁️"]],
-    [45, ["Mjegull","🌫️"]],[48,["Mjegull me ngricë","🌫️"]],
-    [51, ["Siçak e lehtë","🌦️"]],[53,["Siçak mesatare","🌦️"]],[55,["Siçak e dendur","🌧️"]],
-    [56, ["Siçak ngrirëse lehtë","🌧️"]],[57,["Siçak ngrirëse dendur","🌧️"]],
-    [61, ["Shi i lehtë","🌦️"]],[63,["Shi mesatar","🌧️"]],[65,["Shi i dendur","🌧️"]],
-    [66, ["Shi ngrirës i lehtë","🌧️"]],[67,["Shi ngrirës i dendur","🌧️"]],
-    [71, ["Borë e lehtë","🌨️"]],[73,["Borë mesatare","🌨️"]],[75,["Borë e dendur","❄️"]],
-    [77, ["Kokrriza bore","❄️"]],
-    [80, ["Shtr. shiu të lehta","🌦️"]],[81,["Shtr. mesatare","🌧️"]],[82,["Shtr. të forta","🌧️"]],
-    [85, ["Shtr. bore të lehta","🌨️"]],[86,["Shtr. bore të forta","❄️"]],
-    [95, ["Stuhi","⛈️"]],[96,["Stuhi me breshër","⛈️"]],[99,["Stuhi me breshër të fortë","⛈️"]]
+    [0,  {sq: ["Qiell i kthjellët","☀️"], en: ["Clear sky","☀️"], de: ["Klarer Himmel","☀️"]}],
+    [1,  {sq: ["Kryesisht kthjellët","🌤️"], en: ["Mainly clear","🌤️"], de: ["Meist klar","🌤️"]}],
+    [2,  {sq: ["Më pjesë me re","⛅"], en: ["Partly cloudy","⛅"], de: ["Teilweise bewölkt","⛅"]}],
+    [3,  {sq: ["Me re/mbuluar","☁️"], en: ["Overcast","☁️"], de: ["Bedeckt","☁️"]}],
+    [45, {sq: ["Mjegull","🌫️"], en: ["Fog","🌫️"], de: ["Nebel","🌫️"]}],
+    [48, {sq: ["Mjegull me ngricë","🌫️"], en: ["Depositing rime fog","🌫️"], de: ["Reifnebel","🌫️"]}],
+    [51, {sq: ["Siçak e lehtë","🌦️"], en: ["Light drizzle","🌦️"], de: ["Leichter Nieselregen","🌦️"]}],
+    [53, {sq: ["Siçak mesatare","🌦️"], en: ["Moderate drizzle","🌦️"], de: ["Mäßiger Nieselregen","🌦️"]}],
+    [55, {sq: ["Siçak e dendur","🌧️"], en: ["Dense drizzle","🌧️"], de: ["Starker Nieselregen","🌧️"]}],
+    [56, {sq: ["Siçak ngrirëse lehtë","🌧️"], en: ["Light freezing drizzle","🌧️"], de: ["Leichter gefrierender Nieselregen","🌧️"]}],
+    [57, {sq: ["Siçak ngrirëse dendur","🌧️"], en: ["Dense freezing drizzle","🌧️"], de: ["Starker gefrierender Nieselregen","🌧️"]}],
+    [61, {sq: ["Shi i lehtë","🌦️"], en: ["Slight rain","🌦️"], de: ["Leichter Regen","🌦️"]}],
+    [63, {sq: ["Shi mesatar","🌧️"], en: ["Moderate rain","🌧️"], de: ["Mäßiger Regen","🌧️"]}],
+    [65, {sq: ["Shi i dendur","🌧️"], en: ["Heavy rain","🌧️"], de: ["Starker Regen","🌧️"]}],
+    [66, {sq: ["Shi ngrirës i lehtë","🌧️"], en: ["Light freezing rain","🌧️"], de: ["Leichter gefrierender Regen","🌧️"]}],
+    [67, {sq: ["Shi ngrirës i dendur","🌧️"], en: ["Heavy freezing rain","🌧️"], de: ["Starker gefrierender Regen","🌧️"]}],
+    [71, {sq: ["Borë e lehtë","🌨️"], en: ["Slight snow fall","🌨️"], de: ["Leichter Schneefall","🌨️"]}],
+    [73, {sq: ["Borë mesatare","🌨️"], en: ["Moderate snow fall","🌨️"], de: ["Mäßiger Schneefall","🌨️"]}],
+    [75, {sq: ["Borë e dendur","❄️"], en: ["Heavy snow fall","❄️"], de: ["Starker Schneefall","❄️"]}],
+    [77, {sq: ["Kokrriza bore","❄️"], en: ["Snow grains","❄️"], de: ["Schneekörner","❄️"]}],
+    [80, {sq: ["Shtr. shiu të lehta","🌦️"], en: ["Slight rain showers","🌦️"], de: ["Leichte Regenschauer","🌦️"]}],
+    [81, {sq: ["Shtr. mesatare","🌧️"], en: ["Moderate rain showers","🌧️"], de: ["Mäßige Regenschauer","🌧️"]}],
+    [82, {sq: ["Shtr. të forta","🌧️"], en: ["Violent rain showers","🌧️"], de: ["Heftige Regenschauer","🌧️"]}],
+    [85, {sq: ["Shtr. bore të lehta","🌨️"], en: ["Slight snow showers","🌨️"], de: ["Leichte Schneeschauer","🌨️"]}],
+    [86, {sq: ["Shtr. bore të forta","❄️"], en: ["Heavy snow showers","❄️"], de: ["Starke Schneeschauer","❄️"]}],
+    [95, {sq: ["Stuhi","⛈️"], en: ["Thunderstorm","⛈️"], de: ["Gewitter","⛈️"]}],
+    [96, {sq: ["Stuhi me breshër","⛈️"], en: ["Thunderstorm with hail","⛈️"], de: ["Gewitter mit Hagel","⛈️"]}],
+    [99, {sq: ["Stuhi me breshër të fortë","⛈️"], en: ["Severe thunderstorm with hail","⛈️"], de: ["Schweres Gewitter mit Hagel","⛈️"]}]
   ]);
 
   const q = document.getElementById("q");
@@ -253,23 +447,30 @@
     }catch{ return iso; }
   }
   function wmoText(code){
-    return WMO.get(code) || ["(p/. njoftuar)","❔"];
+    const l = langSelect && langSelect.value || "sq";
+    const entry = WMO.get(code);
+    if (!entry) return ["(p/. njoftuar)","❔"];
+    return entry[l] || entry["sq"];
   }
 
   async function searchCityByName(name) {
     // First, check if city is in Kosovo list with coordinates
-    if (kosovoCityCoords[name]) {
+    if (countrySelect.value === "KS" && kosovoCityCoords[name]) {
       return {
         lat: kosovoCityCoords[name].lat,
         lon: kosovoCityCoords[name].lon,
         label: name + ", Kosovë"
       };
     }
-    // Otherwise, use Open-Meteo Geocoding API directly
-    const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=sq&format=json`);
-    if (!res.ok) throw new Error("Qyteti nuk u gjet");
+    // Use Open-Meteo Geocoding API with selected language and country
+    const langCode = langSelect.value || "sq";
+    let url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=${langCode}&format=json`;
+    if (countrySelect.value === "DE") url += "&country=DE";
+    if (countrySelect.value === "KS") url += "&country=XK";
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(lang("city_not_found"));
     const data = await res.json();
-    if (!data.results || !data.results[0]) throw new Error("Qyteti nuk u gjet");
+    if (!data.results || !data.results[0]) throw new Error(lang("city_not_found"));
     return {
       lat: data.results[0].latitude,
       lon: data.results[0].longitude,
@@ -287,7 +488,7 @@
 
   async function getWeather(lat, lon) {
     // Përdor Open-Meteo Weather API direkt
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relative_humidity_2m,pressure_msl,precipitation,windspeed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_hours,sunrise,sunset,weathercode&timezone=auto`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relative_humidity_2m,pressure_msl,precipitation,precipitation_probability,weathercode,windspeed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_hours,precipitation_probability_max,sunrise,sunset,weathercode&timezone=auto`;
     let res;
     try {
       res = await fetch(url);
@@ -326,23 +527,31 @@
       sunrise = wx.daily.sunrise[0] ? wx.daily.sunrise[0].slice(11,16) : "-";
       sunset = wx.daily.sunset[0] ? wx.daily.sunset[0].slice(11,16) : "-";
     }
+    // Min/max temp for today
+    let tmin = "-", tmax = "-";
+    if (wx.daily && wx.daily.temperature_2m_min && wx.daily.temperature_2m_max) {
+      tmin = wx.daily.temperature_2m_min[0] !== undefined ? Math.round(wx.daily.temperature_2m_min[0]) + "°C" : "-";
+      tmax = wx.daily.temperature_2m_max[0] !== undefined ? Math.round(wx.daily.temperature_2m_max[0]) + "°C" : "-";
+    }
     currentEl.innerHTML = `
       <div>
         <div class="place">${place}</div>
         <div class="desc">${fmtDate(c.time)} · ${txt} ${emoji}</div>
         <div class="meta">
-          <span class="badge">🌡️ Temp: ${Math.round(c.temperature)}°C</span>
-          <span class="badge">💧 Lagështi: ${humidity}</span>
-          <span class="badge">🌡️ Presion: ${pressure}</span>
-          <span class="badge">🌧️ Reshje: ${precipitation}</span>
+          <span class="badge">🌡️ ${lang('temp')}: ${Math.round(c.temperature)}°C</span>
+          <span class="badge">🔻 ${lang('min')}: ${tmin}</span>
+          <span class="badge">🔺 ${lang('max')}: ${tmax}</span>
+          <span class="badge">💧 ${lang('humidity')}: ${humidity}</span>
+          <span class="badge">🌡️ ${lang('pressure')}: ${pressure}</span>
+          <span class="badge">🌧️ ${lang('precipitation')}: ${precipitation}</span>
         </div>
         <div class="meta">
-          <span class="badge">💨 Era: ${Math.round(c.windspeed)} km/h</span>
-          <span class="badge">🧭 Drejtimi: ${Math.round(c.winddirection)}°</span>
+          <span class="badge">💨 ${lang('wind')}: ${Math.round(c.windspeed)} km/h</span>
+          <span class="badge">🧭 ${lang('winddir')}: ${Math.round(c.winddirection)}°</span>
         </div>
         <div class="meta">
-          <span class="badge">🌅 Lindja: ${sunrise}</span>
-          <span class="badge">🌇 Perëndimi: ${sunset}</span>
+          <span class="badge">🌅 ${lang('sunrise')}: ${sunrise}</span>
+          <span class="badge">🌇 ${lang('sunset')}: ${sunset}</span>
         </div>
       </div>
       <div class="temp">${Math.round(c.temperature)}°C</div>
@@ -362,6 +571,7 @@
     const tmins = [];
     const humidities = [];
     const pressures = [];
+    const precipProbs = [];
     for(let i=1; i<Math.min(d.time.length,6); i++){
       const day = d.time[i];
       const tmax = Math.round(d.temperature_2m_max[i]);
@@ -369,10 +579,12 @@
       const [txt, emoji] = wmoText(d.weathercode[i]);
       const precip = d.precipitation_sum && d.precipitation_sum[i] !== undefined ? d.precipitation_sum[i] + " mm" : "-";
       const precipHours = d.precipitation_hours && d.precipitation_hours[i] !== undefined ? d.precipitation_hours[i] + "h" : "-";
+      const precipProb = d.precipitation_probability_max && d.precipitation_probability_max[i] !== undefined ? d.precipitation_probability_max[i] + "%" : "-";
       const sunrise = d.sunrise && d.sunrise[i] ? d.sunrise[i].slice(11,16) : "-";
       const sunset = d.sunset && d.sunset[i] ? d.sunset[i].slice(11,16) : "-";
       let avgHumidity = "-", avgPressure = "-";
-      let precipStart = "-", strongWindStart = "-";
+      let precipStart = "-", strongWindStart = "-", hailWarning = "";
+      let hottestHour = null, hottestTemp = null;
       if (wx.hourly && wx.hourly.relative_humidity_2m && wx.hourly.pressure_msl && Array.isArray(wx.hourly.time)) {
         const dayStr = day.slice(0,10);
         const indices = wx.hourly.time
@@ -395,6 +607,27 @@
               strongWindStart = wx.hourly.time[windIdx].slice(11,16);
             }
           }
+          // Hail warning: check for weathercode 96 or 99 in this day
+          if (wx.hourly.weathercode) {
+            const hailIdx = indices.find(idx => wx.hourly.weathercode[idx] === 96 || wx.hourly.weathercode[idx] === 99);
+            if (typeof hailIdx === 'number' && hailIdx !== -1) {
+              hailWarning = '<span class="badge" style="background:#fbbf24;color:#222;">⚠️ Breshër i mundshëm!</span>';
+            }
+          }
+          // Find hottest hour
+          if (wx.hourly.temperature_2m) {
+            let maxTemp = -100, maxIdx = -1;
+            indices.forEach(idx => {
+              if (wx.hourly.temperature_2m[idx] > maxTemp) {
+                maxTemp = wx.hourly.temperature_2m[idx];
+                maxIdx = idx;
+              }
+            });
+            if (maxIdx !== -1) {
+              hottestHour = wx.hourly.time[maxIdx].slice(11,16);
+              hottestTemp = Math.round(wx.hourly.temperature_2m[maxIdx]);
+            }
+          }
         }
       }
       const el = document.createElement("div");
@@ -411,6 +644,7 @@
         <div class="meta">
           <span class="badge">🌧️ Reshje: ${precip}</span>
           <span class="badge">⏱️ Orë reshje: ${precipHours}</span>
+          <span class="badge">% Reshje: ${precipProb}</span>
         </div>
         <div class="meta">
           <span class="badge">🌅 Lindja: ${sunrise}</span>
@@ -420,6 +654,10 @@
           <span class="badge">🕒 Fillon shiu: ${precipStart}</span>
           <span class="badge">💨 Erë të forta: ${strongWindStart}</span>
         </div>
+        <div class="meta">
+          ${hailWarning}
+          ${hottestHour !== null ? `<span class="badge" style="background:#f87171;color:#fff;">🔥 Piku i nxehtësisë: ${hottestHour} (${hottestTemp}°C)</span>` : ''}
+        </div>
       `;
       forecastEl.appendChild(el);
       labels.push(fmtDate(day));
@@ -427,6 +665,7 @@
       tmins.push(tmin);
       humidities.push(avgHumidity === "-" ? null : parseInt(avgHumidity));
       pressures.push(avgPressure === "-" ? null : parseInt(avgPressure));
+      precipProbs.push(precipProb === "-" ? null : parseInt(precipProb));
     }
     if (window.weatherChart && typeof window.weatherChart.destroy === 'function') window.weatherChart.destroy();
     const ctx = document.getElementById('weatherChart').getContext('2d');
@@ -468,6 +707,15 @@
             borderDash: [2,2],
             tension: 0.3,
             yAxisID: 'y2',
+          },
+          {
+            label: '% Reshje',
+            data: precipProbs,
+            borderColor: '#6366f1',
+            backgroundColor: '#6366f155',
+            borderDash: [3,3],
+            tension: 0.3,
+            yAxisID: 'y3',
           }
         ]
       },
@@ -494,6 +742,15 @@
             grid: { drawOnChartArea: false },
             title: { display: true, text: 'Presion (hPa)' },
             offset: true
+          },
+          y3: {
+            type: 'linear',
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: '% Reshje' },
+            offset: true,
+            min: 0,
+            max: 100
           }
         }
       }
@@ -506,11 +763,36 @@
     const wind = wx.current_weather.windspeed;
     const code = wx.current_weather.weathercode;
     let msg = "";
-    if (temp >= 35) msg = "⚠️ Paralajmërim: Temperaturë shumë e lartë!";
-    if (temp <= -10) msg = "⚠️ Paralajmërim: Temperaturë shumë e ulët!";
-    if (wind >= 60) msg = "⚠️ Paralajmërim: Erëra të forta!";
-    if ([95,96,99].includes(code)) msg = "⚠️ Paralajmërim: Stuhi!";
+    let healthMsg = "";
+    if (temp >= 35) {
+      msg = "⚠️ Paralajmërim: Temperaturë shumë e lartë!";
+      healthMsg = "Kujdes! Pini ujë shpesh, qëndroni në hije dhe shmangni ekspozimin në diell gjatë orëve të pikut."
+    }
+    if (temp <= -10) {
+      msg = "⚠️ Paralajmërim: Temperaturë shumë e ulët!";
+      healthMsg = "Kujdes! Vishuni ngrohtë, shmangni qëndrimin e gjatë jashtë dhe kontrolloni të moshuarit/fëmijët."
+    }
+    if (wind >= 60) {
+      msg = "⚠️ Paralajmërim: Erëra të forta!";
+      healthMsg = "Kujdes! Qëndroni larg objekteve të pa fiksuara dhe mos qëndroni afër pemëve të mëdha."
+    }
+    if ([95,96,99].includes(code)) {
+      msg = "⚠️ Paralajmërim: Stuhi!";
+      healthMsg = "Kujdes! Qëndroni brenda, shmangni udhëtimet dhe mos përdorni pajisje elektrike gjatë stuhisë.";
+    }
+    if ([96,99].includes(code)) {
+      healthMsg = "Rrezik breshëri! Parkoni automjetin në vende të mbrojtura dhe qëndroni larg dritareve.";
+    }
     if (msg) alert(msg);
+    if (healthMsg && "Notification" in window && Notification.permission === "granted") {
+      new Notification("Rekomandim shëndetësor", { body: healthMsg, icon: "icons/icon-192x192.png" });
+    } else if (healthMsg && "Notification" in window && Notification.permission !== "denied") {
+      Notification.requestPermission().then(function(permission) {
+        if (permission === "granted") {
+          new Notification("Rekomandim shëndetësor", { body: healthMsg, icon: "icons/icon-192x192.png" });
+        }
+      });
+    }
   }
 
   async function loadByCoords(lat, lon, labelOverride){
@@ -538,13 +820,13 @@
   // ============= Ngjarjet UI =============
   btnSearch.addEventListener("click", async ()=>{
     const name = q.value.trim();
-    if(!name) { setStatus("Shkruaj emrin e qytetit."); return; }
+    if(!name) { setStatus(lang("enter_city")); return; }
     try{
-      setStatus("Duke kërkuar qytetin…", true);
+      setStatus(lang("searching_city"), true);
       const {lat,lon,label} = await searchCityByName(name);
       await loadByCoords(lat,lon,label);
     }catch(err){
-      setStatus(err.message||"Qyteti nuk u gjet.");
+      setStatus(err.message||lang("city_not_found"));
     }
   });
 
@@ -554,23 +836,23 @@
 
   btnGeo.addEventListener("click", ()=>{
     if(!navigator.geolocation) {
-      setStatus("Pajisja nuk mbështet GPS.");
+      setStatus(lang("gps_not_supported"));
       return;
     }
-    setStatus("Duke marrë lokacionin…", true);
+    setStatus(lang("getting_location"), true);
     navigator.geolocation.getCurrentPosition(
       pos => loadByCoords(pos.coords.latitude, pos.coords.longitude),
-      err => setStatus("S’u mor lokacioni: " + (err.message||"lejet e bllokuara"))
+      err => setStatus(lang("location_failed") + (err.message||"lejet e bllokuara"))
     );
   });
 
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(
       pos => loadByCoords(pos.coords.latitude, pos.coords.longitude),
-      () => setStatus("Lejo GPS-in ose kërko një qytet.")
+      () => setStatus(lang("allow_gps"))
     );
   } else {
-    setStatus("Lejo GPS-in ose kërko një qytet.");
+    setStatus(lang("allow_gps"));
   }
 
   setInterval(() => {
