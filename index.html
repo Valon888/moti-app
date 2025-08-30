@@ -15,6 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="Moti – App" />
   <!-- 'theme-color' is used by Chrome, Edge, and some Android browsers; not supported by Firefox/Opera -->
   <!-- 'theme-color' is used by Chrome, Edge, and some Android browsers; not supported by Firefox/Opera -->
+  <!-- 'theme-color' is used by Chrome, Edge, and some Android browsers; not supported by Firefox/Opera -->
   <meta name="theme-color" content="#0ea5e9" />
   <meta name="application-name" content="Moti – App" />
   <meta name="description" content="Parashikimi i motit për Kosovë. Shtoje në Home Screen për përdorim si aplikacion në Android/iOS/Samsung." />
@@ -175,15 +176,20 @@
     document.addEventListener("DOMContentLoaded", function() {
       if (document.getElementById('map')) {
         map = L.map('map').setView([42.6, 21.0], 8);
-        // Google Maps Satellite (via leaflet-providers)
-        L.tileLayer.provider('GoogleSatellite', {
-          maxZoom: 18,
-          minZoom: 6,
-        }).addTo(map);
+          // OpenStreetMap Standard (falas, pa API key)
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            minZoom: 6,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          }).addTo(map);
         // Rectangle for Kosovo
         L.rectangle([[41.8, 20.9], [43, 21.9]], {color: "#0ea5e9", weight: 2, fillOpacity: 0}).addTo(map);
       }
     });
+  <div>
+    <div class="muted forecast-title">Pamje interaktive (OpenStreetMap)</div>
+    <div class="satellite-caption">Burimi: OpenStreetMap</div>
+  </div>
 
     // Funksion për të shfaqur markerin e live location
     async function showLiveLocation(lat, lon, label) {
@@ -609,4 +615,3 @@ setInterval(() => {
 </script>
 </body>
 </html>
-
